@@ -3,14 +3,16 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import SQLAlchemyError
 from datetime import datetime
 import logging
+import os
 
 logger = logging.getLogger(__name__)
 
-DATABASE_URL = "sqlite:///./reviews.db"
+# Use environment variable or default
+DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./reviews.db")
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False},
+    connect_args={"check_same_thread": False} if "sqlite" in DATABASE_URL else {},
     echo=False,
     pool_pre_ping=True
 )

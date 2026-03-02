@@ -2,6 +2,7 @@ from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 import logging
 
 from app.database import init_db
@@ -13,7 +14,16 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="IntelliReview AI Code Reviewer",
     description="AI-powered code review and analysis service",
-    version="1.0.0"
+    version="2.0.0"
+)
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Initialize database on startup
@@ -40,7 +50,7 @@ def home(request: Request):
 @app.get("/health")
 def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "version": "1.0.0"}
+    return {"status": "healthy", "version": "2.0.0"}
 
 
 @app.exception_handler(Exception)

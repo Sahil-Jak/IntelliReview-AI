@@ -11,7 +11,8 @@ router = APIRouter()
 @router.post("/review-code")
 async def review_code(request: CodeRequest, db: Session = Depends(get_db)):
     """
-    Analyze submitted code using GitHub Models and persist the result to the database.
+    Analyze submitted code using GPT-4.1-nano via GitHub Models.
+    AI handles scoring, issue detection, explanation, and code fixes.
     """
     try:
         result = await analyze_code_with_fix(request.code, request.language)

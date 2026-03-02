@@ -14,36 +14,30 @@ client = AsyncOpenAI(
 
 async def analyze_code_with_fix(code: str, language: str = "Python") -> dict:
     """
-    Send code to GitHub Models (GPT-4o mini) for review.
+    Send code to GitHub Models (GPT-4.1-nano) for review.
     Returns structured dict with quality_score, issues, ai_explanation, fixed_code.
     """
 
-    prompt = f"""
-You are an expert {language} code reviewer.
+    prompt = f"""You are an expert {language} code reviewer.
 
 Analyze the following {language} code carefully.
 
-Respond ONLY in valid JSON.
-Do NOT include explanations outside JSON.
-Do NOT include markdown.
-Do NOT include backticks.
+Respond ONLY in valid JSON (no markdown, no backticks, no extra text).
 
 Format EXACTLY like this:
-
 {{
-  "quality_score": "number from 1-10",
+  "quality_score": "<number from 1-10>",
   "issues": "clear description of issues or 'No issues found.'",
   "ai_explanation": "short explanation of the code quality",
   "fixed_code": "corrected code or 'No fix needed.'"
 }}
 
 Code:
-{code}
-"""
+{code}"""
 
     try:
         response = await client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-4.1-nano",
             messages=[
                 {"role": "user", "content": prompt}
             ],
@@ -55,8 +49,8 @@ Code:
         # Strip markdown code fences if model adds them
         raw_output = re.sub(r"```json|```", "", raw_output).strip()
 
-        # Extract JSON block
-        json_match = re.search(r"\{.*?\}", raw_output, re.DOTALL)
+        # Extract JSON block (greedy match to handle nested braces)
+        json_match = re.search(r"\{.*\}", raw_output, re.DOTALL)
 
         if json_match:
             clean_json = json_match.group(0)

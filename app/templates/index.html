@@ -127,7 +127,6 @@
 
   .panel-title { font-size: 10px; color: var(--text3); letter-spacing: 2px; font-weight: 500; }
 
-  /* MODE TOGGLE */
   .mode-toggle {
     display: flex; gap: 4px; padding: 10px 16px;
     border-bottom: 1px solid var(--border); background: var(--surface2);
@@ -149,7 +148,6 @@
     box-shadow: 0 0 14px rgba(124,58,237,0.35);
   }
 
-  /* PASTE MODE */
   .lang-selector {
     padding: 10px 16px; border-bottom: 1px solid var(--border);
     display: flex; align-items: center; gap: 8px;
@@ -176,7 +174,6 @@
 
   #codeInput::placeholder { color: var(--text3); }
 
-  /* GITHUB MODE */
   .github-mode { padding: 18px; display: none; flex-direction: column; gap: 14px; }
   .github-mode.active { display: flex; }
 
@@ -198,17 +195,6 @@
   .gh-input:focus { border-color: var(--accent); }
   .gh-input::placeholder { color: var(--text3); }
 
-  .gh-type-row { display: flex; gap: 6px; }
-
-  .gh-type-btn {
-    flex: 1; padding: 8px; border: 1px solid var(--border2); border-radius: 6px;
-    background: transparent; color: var(--text3); font-family: var(--mono);
-    font-size: 10px; letter-spacing: 1px; cursor: pointer; transition: all 0.2s; text-align: center;
-  }
-
-  .gh-type-btn:hover { color: var(--text2); border-color: var(--accent); }
-  .gh-type-btn.active { background: rgba(124,58,237,0.15); border-color: var(--accent); color: var(--accent2); }
-
   .gh-token-note { font-size: 10px; color: var(--text3); line-height: 1.5; margin-top: 5px; }
 
   .file-list { display: flex; flex-direction: column; gap: 3px; max-height: 130px; overflow-y: auto; }
@@ -223,7 +209,6 @@
   .file-name { color: var(--text2); }
   .file-lang { font-size: 9px; color: var(--text3); letter-spacing: 1px; }
 
-  /* ANALYSIS */
   .analysis-content { padding: 20px; display: flex; flex-direction: column; gap: 20px; }
 
   .score-section { display: flex; align-items: center; gap: 16px; }
@@ -272,7 +257,6 @@
   }
   .issue-item:last-child { border-bottom: none; }
 
-  /* Repo breakdown */
   .repo-breakdown { display: flex; flex-direction: column; gap: 5px; }
 
   .file-score-item {
@@ -293,7 +277,6 @@
   .file-score-badge.warn { background: rgba(245,158,11,0.1); color: var(--yellow); }
   .file-score-badge.danger { background: rgba(239,68,68,0.1); color: var(--red); }
 
-  /* RUN BUTTON */
   .run-section { margin-bottom: 16px; }
 
   .run-btn {
@@ -368,7 +351,7 @@
     </div>
     <div class="status-badge">
       <div class="status-dot"></div>
-      AI ONLINE
+      Online
     </div>
   </header>
 
@@ -383,7 +366,6 @@
         <div></div>
       </div>
 
-      <!-- MODE TOGGLE -->
       <div class="mode-toggle">
         <button class="mode-btn active" id="btnPaste" onclick="switchMode('paste')">📋 PASTE CODE</button>
         <button class="mode-btn" id="btnGithub" onclick="switchMode('github')">🐙 GITHUB REPO</button>
@@ -408,28 +390,17 @@
           <strong>Supports:</strong> Full repo URL or single file URL from GitHub.<br>
           Works with public repos. Add a token below for private repos.
         </div>
-
         <div>
           <span class="gh-label">// GITHUB URL</span>
           <input class="gh-input" id="ghUrl" type="text"
             placeholder="https://github.com/user/repo  or  .../blob/main/file.py" />
         </div>
-
-        <div>
-          <span class="gh-label">// ANALYSIS TYPE</span>
-          <div class="gh-type-row">
-            <button class="gh-type-btn active" id="ghFull" onclick="setGhType('full')">🗂 FULL REPO</button>
-            <button class="gh-type-btn" id="ghSingle" onclick="setGhType('single')">📄 SINGLE FILE</button>
-          </div>
-        </div>
-
         <div>
           <span class="gh-label">// GITHUB TOKEN (OPTIONAL)</span>
           <input class="gh-input" id="ghToken" type="password"
             placeholder="ghp_xxxx — required for private repos" />
           <div class="gh-token-note">Used only for this request. Never stored.</div>
         </div>
-
         <div id="fileListWrap" style="display:none">
           <span class="gh-label">// FILES DETECTED <span id="fileCount" style="color:var(--accent2)"></span></span>
           <div class="file-list" id="fileList"></div>
@@ -461,17 +432,14 @@
             <div class="score-bar-wrap"><div class="score-bar" id="scoreBar"></div></div>
           </div>
         </div>
-
         <div>
           <div class="section-label">💡 AI_EXPLANATION</div>
           <div class="explanation-box" id="explanation">Run analysis to see AI insights about your code.</div>
         </div>
-
         <div>
           <div class="section-label">🔍 ISSUES_FOUND</div>
           <div class="issues-box" id="issues">No issues detected yet.</div>
         </div>
-
         <div id="repoBreakdownSection" style="display:none">
           <div class="section-label">📁 PER_FILE_BREAKDOWN</div>
           <div class="repo-breakdown" id="repoBreakdown"></div>
@@ -508,7 +476,6 @@
   document.querySelector('.fill').style.strokeDasharray = CIRC;
 
   let currentMode = 'paste';
-  let ghType = 'full';
 
   function switchMode(mode) {
     currentMode = mode;
@@ -519,12 +486,6 @@
     document.getElementById('leftPanelTitle').textContent = mode === 'paste' ? '● CODE_INPUT' : '● GITHUB_ANALYZER';
     document.getElementById('repoBreakdownSection').style.display = 'none';
     document.getElementById('fileListWrap').style.display = 'none';
-  }
-
-  function setGhType(type) {
-    ghType = type;
-    document.getElementById('ghFull').classList.toggle('active', type === 'full');
-    document.getElementById('ghSingle').classList.toggle('active', type === 'single');
   }
 
   function getGrade(score) {
@@ -588,44 +549,43 @@
       .map(f => ({ path: f.path, branch: default_branch }));
   }
 
-  async function callClaude(prompt, maxTokens = 1000) {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
+  async function callBackend(code, language) {
+    const res = await fetch('/review-code', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: maxTokens,
-        messages: [{ role: 'user', content: prompt }]
-      })
+      body: JSON.stringify({ code, language })
     });
-    const data = await res.json();
-    const raw = data.content.map(i => i.text || '').join('');
-    return JSON.parse(raw.replace(/```json|```/g, '').trim());
+    if (!res.ok) throw new Error('Backend API request failed');
+    return res.json();
   }
 
-  function renderResult(result) {
-    setScore(result.score);
-    document.getElementById('explanation').textContent = result.explanation;
+  function renderResult(data) {
+    const score = parseFloat(data.quality_score) || 0;
+    setScore(score);
+
+    document.getElementById('explanation').textContent = data.ai_explanation || 'No explanation provided.';
+
     const issuesEl = document.getElementById('issues');
-    if (!result.issues?.length) {
+    const issuesText = data.issues || '';
+    if (!issuesText || issuesText === 'No issues found.') {
       issuesEl.innerHTML = '<span style="color:var(--green2)">✓ No issues found.</span>';
     } else {
-      issuesEl.innerHTML = result.issues.map(i =>
-        `<div class="issue-item"><span>⚠</span><span>${i}</span></div>`
-      ).join('');
+      issuesEl.innerHTML = `<div class="issue-item"><span>⚠</span><span>${issuesText}</span></div>`;
     }
+
     const fixedEl = document.getElementById('fixedCode');
     fixedEl.className = 'fixed-content';
-    fixedEl.textContent = result.fixedCode || '✓ No fix needed.';
+    fixedEl.textContent = data.fixed_code || '✓ No fix needed.';
   }
 
   function renderRepoBreakdown(files) {
     document.getElementById('repoBreakdownSection').style.display = 'block';
     document.getElementById('repoBreakdown').innerHTML = files.map(f => {
-      const cls = f.score >= 7 ? '' : f.score >= 5 ? 'warn' : 'danger';
+      const score = parseFloat(f.quality_score) || 0;
+      const cls = score >= 7 ? '' : score >= 5 ? 'warn' : 'danger';
       return `<div class="file-score-item">
         <span class="file-score-name">📄 ${f.path}</span>
-        <span class="file-score-badge ${cls}">${f.score}/10</span>
+        <span class="file-score-badge ${cls}">${f.quality_score}/10</span>
       </div>`;
     }).join('');
   }
@@ -644,10 +604,8 @@
         const lang = document.getElementById('langSelect').value;
         if (!code) throw new Error('Please paste some code first.');
 
-        const result = await callClaude(`You are a senior ${lang} code reviewer. Respond ONLY with valid JSON:
-{"score":<1-10>,"explanation":"<2-3 sentences>","issues":["<issue>"],"fixedCode":"<improved code or No fix needed.>"}
-Code:\n\`\`\`${lang}\n${code}\n\`\`\``);
-        renderResult(result);
+        const data = await callBackend(code, lang);
+        renderResult(data);
 
       } else {
         const url = document.getElementById('ghUrl').value.trim();
@@ -656,14 +614,15 @@ Code:\n\`\`\`${lang}\n${code}\n\`\`\``);
         const parsed = parseGithubUrl(url);
         if (!parsed) throw new Error('Invalid GitHub URL.');
 
-        if (ghType === 'single' || parsed.type === 'file') {
+        const extMap = { py:'Python', js:'JavaScript', ts:'TypeScript', java:'Java', go:'Go', rs:'Rust', cpp:'C++', sql:'SQL' };
+
+        if (parsed.type === 'file') {
+          btnText.textContent = 'FETCHING FILE...';
           const content = await fetchRawFile(parsed.owner, parsed.repo, parsed.path, parsed.branch || 'main', token);
-          const extMap = { py:'Python', js:'JavaScript', ts:'TypeScript', java:'Java', go:'Go', rs:'Rust', cpp:'C++', sql:'SQL' };
-          const lang = extMap[parsed.path.split('.').pop().toLowerCase()] || 'JavaScript';
-          const result = await callClaude(`You are a senior ${lang} code reviewer. Respond ONLY with valid JSON:
-{"score":<1-10>,"explanation":"<2-3 sentences>","issues":["<issue>"],"fixedCode":"<improved code or No fix needed.>"}
-File: ${parsed.path}\nCode:\n\`\`\`${lang}\n${content.slice(0,3000)}\n\`\`\``);
-          renderResult(result);
+          const lang = extMap[parsed.path.split('.').pop().toLowerCase()] || 'Python';
+          btnText.textContent = 'ANALYZING...';
+          const data = await callBackend(content, lang);
+          renderResult(data);
 
         } else {
           btnText.textContent = 'FETCHING REPO...';
@@ -677,21 +636,28 @@ File: ${parsed.path}\nCode:\n\`\`\`${lang}\n${content.slice(0,3000)}\n\`\`\``);
           ).join('');
 
           btnText.textContent = 'ANALYZING REPO...';
-          const files = await Promise.all(fileRefs.map(async f => ({
-            path: f.path,
-            content: await fetchRawFile(parsed.owner, parsed.repo, f.path, f.branch, token).catch(() => '')
-          })));
+          const results = [];
+          for (const f of fileRefs) {
+            try {
+              const content = await fetchRawFile(parsed.owner, parsed.repo, f.path, f.branch, token);
+              const lang = extMap[f.path.split('.').pop().toLowerCase()] || 'Python';
+              const data = await callBackend(content.slice(0, 3000), lang);
+              results.push({ path: f.path, ...data });
+            } catch {
+              results.push({ path: f.path, quality_score: 'Error', ai_explanation: 'Failed to analyze', issues: '', fixed_code: '' });
+            }
+          }
 
-          const summary = files.filter(f => f.content).map(f =>
-            `File: ${f.path}\n---\n${f.content.slice(0, 600)}`
-          ).join('\n\n');
+          const scores = results.map(r => parseFloat(r.quality_score)).filter(s => !isNaN(s));
+          const avgScore = scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : 'N/A';
 
-          const result = await callClaude(`You are a senior code architect reviewing a GitHub repo. Respond ONLY with valid JSON:
-{"score":<1-10 overall>,"explanation":"<3-4 sentences on architecture & quality>","issues":["<repo-wide issue>"],"files":[{"path":"<name>","score":<1-10>,"note":"<one line>"}],"fixedCode":"<key improvement suggestions>"}
-Files:\n${summary}`, 1500);
-
-          renderResult(result);
-          if (result.files?.length) renderRepoBreakdown(result.files);
+          renderResult({
+            quality_score: avgScore,
+            ai_explanation: `Analyzed ${results.length} files. Average score: ${avgScore}/10. ${scores.filter(s => s < 5).length} file(s) need improvement.`,
+            issues: results.filter(r => r.issues && r.issues !== 'No issues found.').map(r => `${r.path}: ${r.issues}`).join(' | ') || 'No issues found.',
+            fixed_code: 'See per-file breakdown below for details.'
+          });
+          renderRepoBreakdown(results);
         }
       }
     } catch (err) {
