@@ -1,0 +1,5 @@
+# Copy this file to .env and fill in your actual values
+# NEVER commit the real .env file
+
+GITHUB_TOKEN=your_github_personal_access_token_here
+DATABASE_URL=sqlite:///./reviews.db
