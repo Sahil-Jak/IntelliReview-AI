@@ -637,15 +637,26 @@
 
           btnText.textContent = 'ANALYZING REPO...';
           const results = [];
-          for (const f of fileRefs) {
+          const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+          for (let i = 0; i < fileRefs.length; i++) {
+            const f = fileRefs[i];
+            btnText.textContent = `ANALYZING ${i + 1}/${fileRefs.length}...`;
             try {
               const content = await fetchRawFile(parsed.owner, parsed.repo, f.path, f.branch, token);
               const lang = extMap[f.path.split('.').pop().toLowerCase()] || 'Python';
-              const data = await callBackend(content.slice(0, 3000), lang);
-              results.push({ path: f.path, ...data });
-            } catch {
-              results.push({ path: f.path, quality_score: 'Error', ai_explanation: 'Failed to analyze', issues: '', fixed_code: '' });
+              // Skip empty files (like __init__.py)
+              if (content.trim().length < 5) {
+                results.push({ path: f.path, quality_score: 'N/A', ai_explanation: 'Empty or near-empty file — skipped.', issues: 'No issues found.', fixed_code: 'No fix needed.' });
+              } else {
+                const data = await callBackend(content.slice(0, 3000), lang);
+                results.push({ path: f.path, ...data });
+              }
+            } catch (err) {
+              results.push({ path: f.path, quality_score: 'Error', ai_explanation: 'Failed: ' + err.message, issues: '', fixed_code: '' });
             }
+            // Wait 3 seconds between requests to avoid rate limiting
+            if (i < fileRefs.length - 1) await delay(3000);
           }
 
           const scores = results.map(r => parseFloat(r.quality_score)).filter(s => !isNaN(s));
