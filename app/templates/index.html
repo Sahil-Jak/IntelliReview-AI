@@ -248,7 +248,24 @@
   .explanation-box, .issues-box {
     background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
     padding: 14px; font-size: 12px; color: var(--text2); line-height: 1.7;
-    min-height: 54px; font-family: var(--mono);
+    min-height: 54px; font-family: var(--mono); max-height: 300px; overflow-y: auto;
+  }
+
+  /* Per-file issue card styles */
+  .file-issue-card {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 12px 14px; margin-bottom: 10px;
+  }
+
+  .file-issue-card:last-child { margin-bottom: 0; }
+
+  .file-issue-header {
+    display: flex; align-items: center; gap: 8px; margin-bottom: 8px;
+    font-size: 11px; font-weight: 600; color: var(--accent2);
+  }
+
+  .file-issue-text {
+    font-size: 11.5px; color: var(--text2); line-height: 1.7;
   }
 
   .issue-item {
@@ -276,6 +293,7 @@
 
   .file-score-badge.warn { background: rgba(245,158,11,0.1); color: var(--yellow); }
   .file-score-badge.danger { background: rgba(239,68,68,0.1); color: var(--red); }
+  .file-score-badge.na { background: rgba(148,163,184,0.1); color: var(--text3); }
 
   .run-section { margin-bottom: 16px; }
 
@@ -351,7 +369,7 @@
     </div>
     <div class="status-badge">
       <div class="status-dot"></div>
-      Online
+      GPT-4.1-NANO
     </div>
   </header>
 
@@ -518,6 +536,12 @@
     });
   }
 
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
   function parseGithubUrl(url) {
     const repoMatch = url.match(/github\.com\/([^\/]+)\/([^\/\?#]+)/);
     if (!repoMatch) return null;
@@ -570,7 +594,7 @@
     if (!issuesText || issuesText === 'No issues found.') {
       issuesEl.innerHTML = '<span style="color:var(--green2)">✓ No issues found.</span>';
     } else {
-      issuesEl.innerHTML = `<div class="issue-item"><span>⚠</span><span>${issuesText}</span></div>`;
+      issuesEl.innerHTML = `<div class="issue-item"><span>⚠</span><span>${escapeHtml(issuesText)}</span></div>`;
     }
 
     const fixedEl = document.getElementById('fixedCode');
@@ -578,14 +602,74 @@
     fixedEl.textContent = data.fixed_code || '✓ No fix needed.';
   }
 
-  function renderRepoBreakdown(files) {
+  function renderRepoResult(results) {
+    // Calculate average from scored files only
+    const scored = results.filter(r => {
+      const s = parseFloat(r.quality_score);
+      return !isNaN(s) && s > 0;
+    });
+    const avgScore = scored.length
+      ? (scored.reduce((a, r) => a + parseFloat(r.quality_score), 0) / scored.length).toFixed(1)
+      : 'N/A';
+
+    // Set score ring
+    const numScore = parseFloat(avgScore) || 0;
+    setScore(numScore);
+
+    // Explanation as a clean paragraph
+    const skipped = results.filter(r => r.skipped).length;
+    const failed = results.filter(r => !r.skipped && (r.quality_score === 'N/A' || r.quality_score === 'Error')).length;
+    let explanationText = `Analyzed ${results.length} files from the repository. `;
+    explanationText += `${scored.length} file(s) were successfully scored with an average of ${avgScore}/10. `;
+    if (skipped > 0) explanationText += `${skipped} empty file(s) (like __init__.py) were skipped. `;
+    if (failed > 0) explanationText += `${failed} file(s) could not be parsed — this can happen due to API rate limits; try running again. `;
+    if (scored.length > 0) {
+      const best = scored.reduce((a, b) => parseFloat(a.quality_score) >= parseFloat(b.quality_score) ? a : b);
+      const worst = scored.reduce((a, b) => parseFloat(a.quality_score) <= parseFloat(b.quality_score) ? a : b);
+      explanationText += `Best file: ${best.path} (${best.quality_score}/10). `;
+      if (best.path !== worst.path) {
+        explanationText += `Needs most work: ${worst.path} (${worst.quality_score}/10).`;
+      }
+    }
+    document.getElementById('explanation').textContent = explanationText;
+
+    // Issues: render per-file cards
+    const issuesEl = document.getElementById('issues');
+    const filesWithIssues = results.filter(r => r.issues && r.issues !== 'No issues found.' && r.issues !== '' && !r.skipped);
+
+    if (filesWithIssues.length === 0) {
+      issuesEl.innerHTML = '<span style="color:var(--green2)">✓ No issues found across all files.</span>';
+    } else {
+      issuesEl.innerHTML = filesWithIssues.map(f => `
+        <div class="file-issue-card">
+          <div class="file-issue-header">📄 ${escapeHtml(f.path)}</div>
+          <div class="file-issue-text">${escapeHtml(f.issues)}</div>
+        </div>
+      `).join('');
+    }
+
+    // Fixed code
+    const fixedEl = document.getElementById('fixedCode');
+    fixedEl.className = 'fixed-content';
+    fixedEl.textContent = 'See per-file breakdown above for individual scores and issues.';
+
+    // Per-file breakdown
     document.getElementById('repoBreakdownSection').style.display = 'block';
-    document.getElementById('repoBreakdown').innerHTML = files.map(f => {
-      const score = parseFloat(f.quality_score) || 0;
-      const cls = score >= 7 ? '' : score >= 5 ? 'warn' : 'danger';
+    document.getElementById('repoBreakdown').innerHTML = results.map(f => {
+      const s = parseFloat(f.quality_score);
+      let cls = 'na';
+      let display = f.quality_score;
+      if (!isNaN(s) && s > 0) {
+        cls = s >= 7 ? '' : s >= 5 ? 'warn' : 'danger';
+        display = s + '/10';
+      } else if (f.skipped) {
+        display = 'Skipped';
+      } else {
+        display = 'N/A';
+      }
       return `<div class="file-score-item">
-        <span class="file-score-name">📄 ${f.path}</span>
-        <span class="file-score-badge ${cls}">${f.quality_score}/10</span>
+        <span class="file-score-name">📄 ${escapeHtml(f.path)}</span>
+        <span class="file-score-badge ${cls}">${display}</span>
       </div>`;
     }).join('');
   }
@@ -603,7 +687,6 @@
         const code = document.getElementById('codeInput').value.trim();
         const lang = document.getElementById('langSelect').value;
         if (!code) throw new Error('Please paste some code first.');
-
         const data = await callBackend(code, lang);
         renderResult(data);
 
@@ -635,7 +718,6 @@
             `<div class="file-item"><span class="file-name">${f.path}</span><span class="file-lang">${f.path.split('.').pop().toUpperCase()}</span></div>`
           ).join('');
 
-          btnText.textContent = 'ANALYZING REPO...';
           const results = [];
           const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -644,31 +726,19 @@
             btnText.textContent = `ANALYZING ${i + 1}/${fileRefs.length}...`;
             try {
               const content = await fetchRawFile(parsed.owner, parsed.repo, f.path, f.branch, token);
-              const lang = extMap[f.path.split('.').pop().toLowerCase()] || 'Python';
-              // Skip empty files (like __init__.py)
               if (content.trim().length < 5) {
-                results.push({ path: f.path, quality_score: 'N/A', ai_explanation: 'Empty or near-empty file — skipped.', issues: 'No issues found.', fixed_code: 'No fix needed.' });
+                results.push({ path: f.path, quality_score: 'N/A', ai_explanation: 'Empty or near-empty file.', issues: '', fixed_code: '', skipped: true });
               } else {
-                const data = await callBackend(content.slice(0, 3000), lang);
-                results.push({ path: f.path, ...data });
+                const data = await callBackend(content.slice(0, 3000), extMap[f.path.split('.').pop().toLowerCase()] || 'Python');
+                results.push({ path: f.path, ...data, skipped: false });
               }
             } catch (err) {
-              results.push({ path: f.path, quality_score: 'Error', ai_explanation: 'Failed: ' + err.message, issues: '', fixed_code: '' });
+              results.push({ path: f.path, quality_score: 'Error', ai_explanation: 'Failed: ' + err.message, issues: '', fixed_code: '', skipped: false });
             }
-            // Wait 3 seconds between requests to avoid rate limiting
             if (i < fileRefs.length - 1) await delay(3000);
           }
 
-          const scores = results.map(r => parseFloat(r.quality_score)).filter(s => !isNaN(s));
-          const avgScore = scores.length ? (scores.reduce((a, b) => a + b, 0) / scores.length).toFixed(1) : 'N/A';
-
-          renderResult({
-            quality_score: avgScore,
-            ai_explanation: `Analyzed ${results.length} files. Average score: ${avgScore}/10. ${scores.filter(s => s < 5).length} file(s) need improvement.`,
-            issues: results.filter(r => r.issues && r.issues !== 'No issues found.').map(r => `${r.path}: ${r.issues}`).join(' | ') || 'No issues found.',
-            fixed_code: 'See per-file breakdown below for details.'
-          });
-          renderRepoBreakdown(results);
+          renderRepoResult(results);
         }
       }
     } catch (err) {
