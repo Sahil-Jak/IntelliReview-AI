@@ -1,4 +1,5 @@
 import logging
+import traceback
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
@@ -12,13 +13,12 @@ router = APIRouter()
 
 @router.post("/review-code")
 async def review_code(request: CodeRequest, db: Session = Depends(get_db)):
+    """
+    Analyze submitted code using GPT-4.1-nano via GitHub Models.
+    Returns multi-dimensional scores, issues, explanation, fixed code, token usage.
+    """
     try:
         result = await analyze_code_with_fix(request.code, request.language)
-
-        # ── DEBUG: log exactly what AI returned ───────────────────────────
-        logger.info(f"AI result keys: {list(result.keys())}")
-        logger.info(f"AI result values: {result}")
-        # ─────────────────────────────────────────────────────────────────
 
         record = ReviewRecord(
             code            = request.code,
@@ -41,9 +41,8 @@ async def review_code(request: CodeRequest, db: Session = Depends(get_db)):
         return result
 
     except Exception as e:
-        # Show FULL real error in terminal
-        import traceback
-        logger.error(f"FULL ERROR:\n{traceback.format_exc()}")
+        # Log full traceback internally — never expose to client
+        logger.error(f"review_code error: {type(e).__name__}\n{traceback.format_exc()}")
         return {
             "readability":     0.0,
             "performance":     0.0,
@@ -52,7 +51,7 @@ async def review_code(request: CodeRequest, db: Session = Depends(get_db)):
             "best_practices":  0.0,
             "overall_score":   0.0,
             "issues":          "An unexpected error occurred.",
-            "ai_explanation":  f"DEBUG: {type(e).__name__}: {str(e)}",
+            "ai_explanation":  "Internal error. Please try again.",
             "fixed_code":      "No fix generated.",
             "token_usage":     None,
         }
@@ -60,6 +59,7 @@ async def review_code(request: CodeRequest, db: Session = Depends(get_db)):
 
 @router.get("/reviews")
 def get_reviews(db: Session = Depends(get_db)):
+    """Return the 20 most recent reviews from the database."""
     records = db.query(ReviewRecord).order_by(ReviewRecord.id.desc()).limit(20).all()
     return [
         {

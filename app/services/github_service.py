@@ -13,7 +13,7 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# GitHub token is loaded but NEVER logged
+# GitHub token loaded but NEVER logged
 _github_token = os.getenv("GITHUB_TOKEN")
 
 client = AsyncOpenAI(
@@ -59,21 +59,20 @@ async def analyze_code_with_fix(code: str, language: str = "Python") -> dict:
     Send code to GitHub Models (GPT-4.1-nano) for multi-dimensional review.
     Returns validated dict with 6 scores + issues + explanation + fixed_code + token_usage.
     """
-    # Enforce per-call truncation as second layer of defense
     truncated_code = code[:MAX_CODE_CHARS]
-
     prompt = PROMPT_TEMPLATE.format(language=language, code=truncated_code)
 
     try:
         response = await client.chat.completions.create(
             model="gpt-4.1-nano",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0
+            temperature=0,
+            timeout=30  # prevent indefinite hang if API is slow
         )
 
         raw_output = response.choices[0].message.content.strip()
 
-        # Log token usage (safe — no secrets)
+        # Log token usage — safe, no secrets
         token_usage = None
         if response.usage:
             token_usage = response.usage.total_tokens
@@ -104,7 +103,7 @@ async def analyze_code_with_fix(code: str, language: str = "Python") -> dict:
         return _fallback_response(str(e))
 
     except Exception as e:
-        # Never expose raw exception (may contain API details) in return value
+        # Never expose raw exception — may contain API details
         logger.error(f"GitHub Models API call failed: {type(e).__name__}")
         return _fallback_response("API call failed.", api_error=True)
 

@@ -8,11 +8,8 @@ import os
 logger = logging.getLogger(__name__)
 
 # ── DATABASE URL ───────────────────────────────────────────────────────────
-# If DATABASE_URL is set in environment → use it (PostgreSQL in production)
-# Otherwise → fallback to local SQLite
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./reviews.db")
 
-# PostgreSQL via DATABASE_URL does not need check_same_thread
 _connect_args = {"check_same_thread": False} if "sqlite" in DATABASE_URL else {}
 
 engine = create_engine(
@@ -52,18 +49,24 @@ class ReviewRecord(Base):
     ai_explanation  = Column(Text)
     fixed_code      = Column(Text)
 
-    # Token usage tracking (nullable for backward compat with old records)
+    # Token usage (nullable for backward compat)
     token_usage     = Column(Integer, nullable=True)
 
-    created_at      = Column(DateTime, default=lambda: datetime.now(timezone.utc))
+    # timezone=True ensures PostgreSQL stores with tz info
+    created_at      = Column(
+        DateTime(timezone=True),
+        default=lambda: datetime.now(timezone.utc)
+    )
 
 
 def init_db():
     """Initialize database tables."""
     try:
         Base.metadata.create_all(bind=engine)
-        logger.info(f"Database initialized successfully. Using: "
-                    f"{'PostgreSQL' if 'postgresql' in DATABASE_URL else 'SQLite'}")
+        logger.info(
+            f"Database initialized successfully. Using: "
+            f"{'PostgreSQL' if 'postgresql' in DATABASE_URL else 'SQLite'}"
+        )
     except SQLAlchemyError as e:
         logger.error(f"Database initialization failed: {e}")
         raise

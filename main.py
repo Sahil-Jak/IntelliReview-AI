@@ -22,22 +22,21 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # ── ENV CONFIG ─────────────────────────────────────────────────────────────
-# CORS origins: comma-separated in .env, e.g. ALLOWED_ORIGINS=https://myapp.com,https://other.com
-# Defaults to "*" for local development only
 _raw_origins = os.getenv("ALLOWED_ORIGINS", "*")
 ALLOWED_ORIGINS = (
     [o.strip() for o in _raw_origins.split(",") if o.strip()]
-    if _raw_origins != "*"
-    else ["*"]
+    if _raw_origins != "*" else ["*"]
 )
-
-# Production mode flag — hides internal error details from API responses
 PRODUCTION = os.getenv("PRODUCTION", "false").lower() == "true"
+
+# ── STARTUP TOKEN CHECK ────────────────────────────────────────────────────
+if not os.getenv("GITHUB_TOKEN"):
+    logger.warning("GITHUB_TOKEN is not set — AI analysis will fail on all requests.")
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Initialize resources on startup, clean up on shutdown."""
+    """Initialize resources on startup."""
     try:
         init_db()
         logger.info("Database initialized successfully")
@@ -50,18 +49,17 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title="IntelliReview AI Code Reviewer",
+    title="IntelliReview AI",
     description="AI-powered code review and analysis service",
     version="2.0.0",
     lifespan=lifespan,
-    # Hide docs in production
+    # Hide API docs in production
     docs_url=None if PRODUCTION else "/docs",
     redoc_url=None if PRODUCTION else "/redoc",
 )
 
-# ── MIDDLEWARE (order matters — rate limiter before CORS) ──────────────────
+# ── MIDDLEWARE (rate limiter must come before CORS) ────────────────────────
 app.add_middleware(RateLimiterMiddleware)
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
@@ -85,7 +83,7 @@ async def home(request: Request):
 
 
 @app.get("/health")
-def health_check():
+async def health_check():
     """Health check endpoint."""
     return {"status": "healthy", "version": "2.0.0"}
 
@@ -94,10 +92,12 @@ def health_check():
 async def global_exception_handler(request: Request, exc: Exception):
     """
     Catch-all exception handler.
-    In production: hide internal details.
-    In development: include detail for debugging.
+    Hides internal details in production.
     """
-    logger.error(f"Unhandled exception on {request.url.path}: {type(exc).__name__}: {exc}")
+    logger.error(
+        f"Unhandled exception on {request.url.path}: "
+        f"{type(exc).__name__}: {exc}"
+    )
     if PRODUCTION:
         return JSONResponse(
             status_code=500,
