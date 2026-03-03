@@ -53,12 +53,11 @@ app = FastAPI(
     description="AI-powered code review and analysis service",
     version="2.0.0",
     lifespan=lifespan,
-    # Hide API docs in production
     docs_url=None if PRODUCTION else "/docs",
     redoc_url=None if PRODUCTION else "/redoc",
 )
 
-# ── MIDDLEWARE (rate limiter must come before CORS) ────────────────────────
+# ── MIDDLEWARE (rate limiter must be before CORS) ──────────────────────────
 app.add_middleware(RateLimiterMiddleware)
 app.add_middleware(
     CORSMiddleware,
@@ -68,7 +67,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# ── STATIC + TEMPLATES ─────────────────────────────────────────────────────
+# ─�� STATIC + TEMPLATES ─────────────────────────────────────────────────────
 templates = Jinja2Templates(directory="app/templates")
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
@@ -90,10 +89,7 @@ async def health_check():
 
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
-    """
-    Catch-all exception handler.
-    Hides internal details in production.
-    """
+    """Hides stack traces in production."""
     logger.error(
         f"Unhandled exception on {request.url.path}: "
         f"{type(exc).__name__}: {exc}"
