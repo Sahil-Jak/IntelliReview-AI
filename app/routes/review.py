@@ -1,3 +1,10 @@
+"""
+Review API routes for IntelliReview AI.
+
+Endpoints:
+    POST /review-code  — Analyze submitted code and persist result to DB.
+    GET  /reviews      — Fetch the 20 most recent review records.
+"""
 import logging
 import traceback
 from fastapi import APIRouter, Depends
@@ -15,7 +22,18 @@ router = APIRouter()
 async def review_code(request: CodeRequest, db: Session = Depends(get_db)):
     """
     Analyze submitted code using GPT-4.1-nano via GitHub Models.
-    Returns multi-dimensional scores, issues, explanation, fixed code, token usage.
+
+    Stores the result in the database and returns a multi-dimensional
+    review with 6 scores, detected issues, AI explanation, and fixed code.
+
+    Args:
+        request: Validated CodeRequest containing code and language.
+        db:      SQLAlchemy database session (injected by FastAPI).
+
+    Returns:
+        dict with keys: readability, performance, maintainability, security,
+        best_practices, overall_score, issues, ai_explanation, fixed_code,
+        token_usage.
     """
     try:
         result = await analyze_code_with_fix(request.code, request.language)
@@ -41,7 +59,6 @@ async def review_code(request: CodeRequest, db: Session = Depends(get_db)):
         return result
 
     except Exception as e:
-        # Log full traceback internally — never expose to client
         logger.error(f"review_code error: {type(e).__name__}\n{traceback.format_exc()}")
         return {
             "readability":     0.0,
@@ -59,7 +76,15 @@ async def review_code(request: CodeRequest, db: Session = Depends(get_db)):
 
 @router.get("/reviews")
 def get_reviews(db: Session = Depends(get_db)):
-    """Return the 20 most recent reviews from the database."""
+    """
+    Return the 20 most recent review records from the database.
+
+    Args:
+        db: SQLAlchemy database session (injected by FastAPI).
+
+    Returns:
+        List of review dicts ordered by most recent first.
+    """
     records = db.query(ReviewRecord).order_by(ReviewRecord.id.desc()).limit(20).all()
     return [
         {

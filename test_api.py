@@ -43,20 +43,36 @@ def test_review_api():
         print("Response JSON:\n")
         print(json.dumps(data, indent=4))
 
-        # Validate response structure
-        required_keys = ["quality_score", "issues", "ai_explanation", "fixed_code"]
+        # Validate response structure (multi-dimensional scores)
+        required_keys = [
+            "readability", "performance", "maintainability",
+            "security", "best_practices", "overall_score",
+            "issues", "ai_explanation", "fixed_code"
+        ]
         missing = [k for k in required_keys if k not in data]
         if missing:
             print(f"\nWARNING: Missing keys in response: {missing}")
         else:
             print("\n✅ All required fields present!")
 
-        # Check score validity
-        score = data.get("quality_score", "")
-        if score not in ("N/A", "Error") and str(score).replace(".", "").isdigit():
-            print(f"✅ Quality score: {score}/10")
+        # Check overall score
+        score = data.get("overall_score", 0)
+        if isinstance(score, (int, float)) and 0 <= score <= 10:
+            print(f"✅ Overall score: {score}/10")
         else:
-            print(f"⚠️  Quality score: {score} (not a numeric score)")
+            print(f"⚠️  Overall score: {score} (unexpected value)")
+
+        # Show dimension scores
+        dims = ["readability", "performance", "maintainability", "security", "best_practices"]
+        print("\n📊 Dimension Scores:")
+        for d in dims:
+            val = data.get(d, "N/A")
+            print(f"   {d:20s} → {val}/10")
+
+        # Token usage
+        tokens = data.get("token_usage")
+        if tokens:
+            print(f"\n🔢 Token usage: {tokens}")
 
     except requests.ConnectionError:
         print("ERROR: Cannot connect to server. Is it running?")
